@@ -1,4 +1,697 @@
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata
+
+##### OPTION 1A: each body (A, B, C, D) has an equal probability of being assigned to a character (e.g., A, B, C, D).
+#####
+
+# Note: people can stay in their own bodies
+
+num_swaps <- 3
+characters <- c("Brooke", "Cyrus", "Dennis", "Forbes", "Maya", "Nikki", "Reuben", "Shelby")
+bodies <- characters
+
+configuration_history <- list()
+
+# Create a placeholder data frame with 3 columns and 16 rows
+df_vacio <- as.data.frame(matrix(NA, ncol = 3, nrow = length(bodies) * num_swaps))
+
+df_vacio
+
+
+# Function to swap bodies (just for illustration, modify as needed)
+swap_bodies <- function(bodies) {
+  
+  # Shuffle the bodies randomly to simulate swapping
+  
+  sample(x = bodies, size = length(bodies), replace = FALSE)
+}
+
+# Loop to update the data frame in each iteration
+for (i in 1:num_swaps) {
+  
+  df_vacio[[1]] <- rep(1:num_swaps, each = length(bodies))
+  
+  df_vacio[[2]] <- rep(characters, num_swaps)
+
+  start_row <- (i - 1) * length(bodies) + 1
+  
+  end_row <- i * length(bodies)
+
+  df_vacio[start_row:end_row, 3] <- swap_bodies(bodies)
+  
+  configuration_history[[i]] <- df_vacio[start_row:end_row, 3] # Por cada round, los 8 cuerpos se meten en una sublista
+  
+}
+
+names(df_vacio) <- c("Rounds", "Characters", "Bodies")
+
+df_vacio
+
+## Check mismatches
+
+mismatches <- df_vacio$Characters == df_vacio$Bodies
+
+mismatches
+
+if(any(mismatches)){
+  
+  cat("there are mismatches\n")
+  
+  print(df_vacio[mismatches, ])
+  
+} else{
+  cat("no mismatches\n")
+}
+
+
+######## Tabla de frecuencias
+body_counts <- table(df_vacio$Bodies)
+print(body_counts)
+
+dev.off()  # Close the current graphics device
+
+## Plot
+body_counts <- table(df_vacio$Bodies)
+body_counts_df <- as.data.frame(body_counts)
+colnames(body_counts_df) <- c("Bodies", "Frequency")
+
+# Create the bar plot
+ggplot(body_counts_df, aes(x = Bodies, y = Frequency)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(
+    title = "Frequency of Bodies Assigned Across All Rounds",
+    x = "Bodies",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+
+######## geom_tile OPTION 1A 
+
+ggplot(df_vacio, aes(x = Characters, y = Bodies)) +
+  geom_tile(aes(fill = Bodies), color = "white", size = 0.5) +
+  scale_fill_viridis_d() +
+  theme_minimal() +
+  labs(
+    title = "Body Swapping Simulation",
+    subtitle = "Three-round game. Participants may remain in their original bodies.",  # Adding the subtitle
+    x = "Characters",
+    y = "Bodies"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.subtitle = element_text(hjust = 0.5, face = "italic", size = 10, margin = margin(t = 10)) # Ensures spacing
+  )
+
+
+
+######## gganimate
+
+plot <- ggplot(new, aes(x = Character, y = Body, group = Step)) +
+  geom_tile(aes(fill = Body), color = "white", size = 0.5) +
+  scale_fill_viridis_d() +
+  theme_minimal() +
+  labs(title = "Body Swapping Simulation", x = "Characters", y = "Bodies") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  transition_states(Step, transition_length = 2, state_length = 1) +
+  ease_aes('linear') +
+  enter_fade() +
+  exit_fade()
+
+plot
+
+###### OPTION 1B:
+
+# People cannot stay in their own bodies
+
+# Function to swap bodies such that no character keeps their original body
+swap_bodies <- function(bodies) {
+  repeat {
+    shuffled <- sample(x = bodies, size = length(bodies), replace = FALSE)
+    
+    if (all(shuffled != bodies)) { # if characters are different to their own bodies, the function stops
+      return(shuffled)
+    }
+  }
+}
+
+# Loop to update the data frame in each iteration
+for (i in 1:num_swaps) {
+  
+  df_vacio[[1]] <- rep(1:num_swaps, each = length(bodies))
+  
+  df_vacio[[2]] <- rep(characters, num_swaps)
+  
+  start_row <- (i - 1) * length(bodies) + 1
+  
+  end_row <- i * length(bodies)
+  
+  df_vacio[start_row:end_row, 3] <- swap_bodies(bodies)
+  
+  configuration_history[[i]] <- df_vacio[start_row:end_row, 3] # Store the new configuration
+}
+
+names(df_vacio) <- c("Rounds", "Characters", "Bodies")
+
+df_vacio
+
+## Check mismatches
+
+mismatches <- df_vacio$Characters == df_vacio$Bodies
+
+mismatches
+
+if(any(mismatches)){
+  
+  cat("there are mismatches\n")
+  
+  print(df_vacio[mismatches, ])
+  
+  } else{
+    cat("no mismatches\n")
+  }
+
+######## geom_tile
+
+ggplot(df_vacio, aes(x = Characters, y = Bodies)) +
+  geom_tile(aes(fill = Bodies), color = "white", size = 0.5) +
+  scale_fill_viridis_d() +
+  theme_minimal() +
+  labs(
+    title = "Body Swapping Simulation",
+    subtitle = "Three-round game. Participants cannot remain in their original bodies.",  # Adding the subtitle
+    x = "Characters",
+    y = "Bodies"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.subtitle = element_text(hjust = 0.5, face = "italic", size = 10, margin = margin(t = 10)) # Ensures spacing
+  )
+
+##################### OPTION 2: each body (A, B, C, D) has an unequal probability of being assigned to a character 
+#####################
+
+library(ggplot2)
+
+characters <- c("Brooke", "Cyrus", "Dennis", "Forbes", "Maya", "Nikki", "Reuben", "Shelby")
+bodies <- characters
+
+ronda <- 10
+
+m <- data.frame(matrix(NA, nrow = length(characters) * ronda, ncol = 3)) # Crear el data frame con el tamaño correcto
+names(m) <- c("Rounds", "Characters", "Bodies")  # Nombres de columnas
+m
+
+# Función de intercambio con sesgos
+swap_bodies_with_bias <- function(characters) {
+  # Probabilidades sesgadas (A prefiere su cuerpo, los demás son más uniformes)
+  
+  repeat{ 
+  probs <- c(0.1, 0.1, 0.1, 0.1, 0.1, 0.4, 0.1, 0.1)  # Ejemplo de sesgo
+#The probs vector defines the probability of each body being assigned to a character.
+  
+  shuffled <- sample(x = characters, size = length(characters), prob = probs, replace = FALSE)
+  
+  if(all(shuffled != bodies)){ 
+  return(shuffled)
+}
+  }
+}
+
+# Llenar el data frame
+for (i in 1:ronda) {  
+  m[[1]] <- rep(1:ronda, each = length(characters))  # Asigna las rondas
+  m[[2]] <- rep(characters, ronda)  # Asigna los personajes
+  
+  start_row <- (i - 1) * length(characters) + 1
+  end_row <- i * length(characters)
+  
+  m[start_row:end_row, 3] <- swap_bodies_with_bias(characters)  # Asigna cuerpos sesgados
+}
+
+m
+
+################### Análisis estadístico: frecuencias de asignación
+
+set.seed(123)
+
+body_counts <- table(m$Characters, m$Bodies)
+body_counts
+
+# Assign labels to the rows and columns
+dimnames(body_counts) <- list(
+  Characters = rownames(body_counts), 
+  Bodies = colnames(body_counts))
+
+# Print the table to check
+print(body_counts)
+#Nikki body was assigned 4 times to Brooke and 4 times to Forbes
+#Forbes body was assigned 5 times to Cyrus
+
+#We gave Nikki a much higher probability (0.4) of being assigned to another character's body, 
+#compared to the other characters who have equal probabilities (0.1 each).
+
+#This increased probability for Nikki can explain why Nikki's body was more often assigned to Brooke and Forbes 
+#in particular, compared to other characters' bodies, with their bodies more evenly distributed.
+#In general, this pattern shows that the swap is indeed biased towards Nikki.
+
+rowSums(body_counts)
+## All the sums equal 10 because there were 10 rounds:
+## all characters were assigned 10 bodies
+
+colSums(body_counts)
+
+######## Plot
+
+# Convert contingency table to a data frame
+body_counts_df <- as.data.frame(body_counts)
+names(body_counts_df)
+
+# ggplot call
+ggplot(body_counts_df, aes(x = Bodies, y = Freq, fill = Characters)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Frequency of bodies assignment (with bias)",
+       x = "Bodies",
+       y = "Frequency",
+       fill = "Characters") +
+  theme_minimal()
+
+## Graphically, it is confirmed that Nikki's body was more often assigned to Brooke and Forbes 
+
+######## geom_tile
+
+ggplot(m, aes(x = Characters, y = Bodies)) +
+  geom_tile(aes(fill = Bodies), color = "white", size = 0.5) +
+  scale_fill_viridis_d() +
+  theme_minimal() +
+  labs(
+    title = "Body Swapping Simulation",
+    subtitle = "Ten-round game. Participants cannot remain in their original bodies.",  # Adding the subtitle
+    x = "Characters",
+    y = "Bodies"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.subtitle = element_text(hjust = 0.5, face = "italic", size = 10, margin = margin(t = 10)) # Ensures spacing
+  )
+
+#Since Reuben and Cyrus both have a 0.1 probability, 
+#they have an equal chance of being assigned to the other characters. 
+#This is why they appear to have been assigned to all other characters except themselves in the table.
+#It's a reflection of their lower probability of being assigned to their own body compared to Nikki's higher probability.
+
+
+
+################################################
+
+# Prueba chi-cuadrado para uniformidad
+chisq_test <- chisq.test(body_counts)
+print(chisq_test)
+
+#The Chi-squared test result suggests that the assignment of bodies to characters is not random. 
+#There is a statistically significant association between the characters and the bodies they are assigned. 
+#In other words, the distribution of bodies across characters is biased or not uniform, and some characters are more likely to receive certain bodies, as reflected in the probabilities you have set in the swap_bodies_with_bias function.
+#The large chi-squared statistic and the very small p-value indicate that the observed frequencies of body assignments differ significantly from what would be expected under a hypothesis of no association (i.e., random assignment).
+
+
+##############  OPTION 3: Each character has a specific probability to be assigned to each body:
+
+# The probability of being assigned a body depends on the sex of the participants
+# The male participants are more likely to have a male body
+# The female participants are more likely to have a female body
+
+
+v1 <- c(0, 0.0625, 0.0625, 0.0625, 0.25, 0.25, 0.0625, 0.25)
+v2 <- c(0.0625, 0, 0.25, 0.25, 0.0625, 0.0625, 0.25, 0.0625)
+v3 <- c(0.0625, 0.25, 0, 0.25, 0.0625, 0.0625, 0.25, 0.0625)
+v4 <- c(0.0625, 0.25, 0.25, 0, 0.0625, 0.0625, 0.25, 0.0625)
+v5 <- c(0.25, 0.0625, 0.0625, 0.0625, 0, 0.25, 0.0625, 0.25)
+v6 <- c(0.25, 0.0625, 0.0625, 0.0625, 0.25, 0, 0.0625, 0.25)
+v7 <- c(0.0625, 0.25, 0.25, 0.25, 0.0625, 0.0625, 0, 0.0625)
+v8 <- c(0.25, 0.0625, 0.0625, 0.0625, 0.25, 0.25, 0.0625, 0)
+
+
+swap_bodies_with_character_all_bias <- function(characters) {
+  # Define the probabilities for each character to get each body
+  prob_matrix <- rbind(v1, v2, v3, v4, v5, v6, v7, v8)
+  
+  # Assign row names (characters) and column names (bodies)
+  rownames(prob_matrix) <- c("Brooke", "Cyrus", "Dennis", "Forbes", "Maya", "Nikki", "Reuben", "Shelby")
+  colnames(prob_matrix) <- c("Brooke", "Cyrus", "Dennis", "Forbes", "Maya", "Nikki", "Reuben", "Shelby")
+  
+  # Ensure characters has the correct length (8 characters for the 8 rows in prob_matrix)
+  if (length(characters) != 8) {
+    stop("The length of 'characters' must be 8")
+  }
+  
+  # Initialize the body assignments for each character
+  body_assignments <- rep(NA, length(characters))  # Changed to `rep(NA, ...)`
+  
+  repeat { 
+    # Sample body for each character based on their specific probabilities in the matrix
+    for (i in seq_along(characters)) {
+      body_assignments[i] <- sample(colnames(prob_matrix), size = 1, prob = prob_matrix[i, ], replace = FALSE)
+    }
+    
+    # If all the characters have been assigned unique bodies, 
+    # the length of unique(body_assignments) will be equal to the length of body_assignments, meaning no duplicates exist.
+    if (length(unique(body_assignments)) == length(body_assignments)) {
+      return(body_assignments)
+    }
+  }
+}
+
+
+
+
+# Example usage
+swap_bodies_with_character_all_bias(characters)
+####################################################
+
+set.seed(1,2,3)
+
+m2 <- data.frame(matrix(NA, nrow = length(characters) * ronda, ncol = 3)) # Crear el data frame con el tamaño correcto
+names(m2) <- c("Rounds", "Characters", "Bodies")  # Nombres de columnas
+m2
+
+for (i in 1:ronda) {  
+  m2[[1]] <- rep(1:ronda, each = length(characters))  # Asigna las rondas
+  m2[[2]] <- rep(characters, ronda)  # Asigna los personajes
+  
+  start_row <- (i - 1) * length(characters) + 1
+  end_row <- i * length(characters)
+  
+  m2[start_row:end_row, 3] <- swap_bodies_with_character_all_bias(characters)  # Asigna cuerpos sesgados
+}
+
+m2
+
+set.seed(123)
+
+body_counts2 <- table(m2$Characters, m2$Bodies)
+body_counts2
+
+dimnames(body_counts2) <- list(
+  Characters = rownames(body_counts), 
+  Bodies = colnames(body_counts))
+
+body_counts2
+
+# The effect of the gender-based assignment probabilities can be seen now
+# Shelby waas assigned only female bodies: 3 times Brooke, 4 times Maya, 3 times Nikki.
+
+# Convert contingency table to a data frame
+body_counts_df2<- as.data.frame(body_counts2)
+names(body_counts_df2)
+
+
+
+# call ggplot
+ggplot(body_counts_df2, aes(x = Bodies, y = Freq, fill = Characters)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Frequency of bodies assignment (with bias)",
+       x = "Bodies",
+       y = "Frequency",
+       fill = "Characters") +
+  theme_minimal()
+
+## Graphically, it is confirmed that 
+
+######## geom_tile
+
+ggplot(m2, aes(x = Characters, y = Bodies)) +
+  geom_tile(aes(fill = Bodies), color = "white", size = 0.5) +
+  scale_fill_viridis_d() +
+  theme_minimal() +
+  labs(
+    title = "Body Swapping Simulation",
+    subtitle = "Ten-round game. Participants cannot remain in their original bodies. Probabilities were assigned based on gender",  # Adding the subtitle
+    x = "Characters",
+    y = "Bodies"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.subtitle = element_text(hjust = 0.5, face = "italic", size = 10, margin = margin(t = 10)) # Ensures spacing
+  )
+
+########4. Game theory 
+
+#Brooke and Reuben are in Maya and Dennis bodies, respectively.
+
+#But Maya and Dennis bodies fall from the balcony and die.
+
+#So, we have the following situation:
+  
+# GROUP 1: those who do not want their own bodies (Shelby, Maya, Dennis, Cyrus)
+# - Shelby wants to keep Nikki body.
+# - Maya and Dennis who are in Shelby and Cyrus bodies do not want to get back to their bodies as they are dead.
+# - Dennis, who is inside Cyrus, calls the police and says that Cyrus commited the crime
+#So, Cyrus does not want to go back to his body. 
+
+# GROUP 2: those who want to go back to their bodies (Nikki, Reuben, Brooke, Forbes)
+# These people want to keep their own bodies
+
+characters
+
+# Define initial assignments
+
+initial_assignments <- list(
+  Brooke = "Maya",
+  Reuben = "Dennis",
+  Maya = "Shelby",
+  Dennis = "Cyrus",
+  Cyrus = "Forbes",
+  Shelby = "Nikki",
+  Nikki = "Brooke",
+  Forbes = "Reuben"
+)
+
+initial_assignments
+
+# Define preferences and constraints
+preferences <- list(
+  Shelby = "Nikki",  # Shelby wants to stay in Nikki's body
+  Maya = "Not_Maya",  # Maya doesn't want to return to her dead body
+  Dennis = "Not_Dennis",  # Dennis doesn't want to return to his dead body
+  Cyrus = "Not_Cyrus",  # Cyrus doesn't want to return to his body
+  Nikki = "Nikki",  # Nikki wants her own body
+  Reuben = "Reuben",  # Reuben wants his own body
+  Brooke = "Brooke",  # Brooke wants her own body
+  Forbes = "Forbes"   # Forbes wants his own body
+)
+
+preferences
+
+##############################
+
+updated_assignments <- list()
+
+current_assignments <- initial_assignments
+current_assignments
+
+used_bodies <- unlist(current_assignments)  # Track currently assigned bodies
+used_bodies
+
+available_options <- setdiff(names(preferences), c(used_bodies, dead_bodies))
+available_options
+# no option
+
+############################################################################ Function 4A
+
+# Dead bodies (constraints)
+dead_bodies <- c("Maya", "Dennis")
+
+evolve_game <- function(preferences, initial_assignments, dead_bodies, max_rounds = 10) {
+  
+  # the intial assignments above are "current_assignments"
+  current_assignments <- initial_assignments
+  
+  for (round in seq_len(max_rounds)) {
+    cat("Starting round", round, "\n")
+    updated_assignments <- list()
+    used_bodies <- unlist(current_assignments)  # Track currently assigned bodies
+    
+    # Iterate over each player:
+    for (player in names(preferences)) {
+      
+      # Determine available options by excluding used bodies and dead bodies:
+      available_options <- setdiff(names(preferences), c(used_bodies, dead_bodies))
+      
+      # Apply preferences for the current player, for example assign Nikki body to Nikki mind:
+      preferred_body <- preferences[[player]]
+      
+      # If the preferred body is available, assign it to the current player
+      if (preferred_body %in% available_options) {
+        updated_assignments[[player]] <- preferred_body
+        
+        # But if the preferred body is a non-desired body, 
+      } else if (preferred_body == paste0("Not_", player)) {
+        # Then, choose any body except the player's own
+        non_own_options <- setdiff(available_options, player)
+        
+      # If the condition length(non_own_options) > 0 is true, 
+      # meaning there are non-own body options available, the player is assigned the first available body in non_own_options (non_own_options[1]).
+      # If the condition is false, meaning there are no available non-own body options, the player is assigned NA (indicating no valid assignment).
+        
+        updated_assignments[[player]] <- if (length(non_own_options) > 0) non_own_options[1] else NA
+        
+        # Choose the first available option if the specific preference is unavailable:
+      } else {
+        updated_assignments[[player]] <- if (length(available_options) > 0) available_options[1] else NA
+      }
+      
+      # Track assigned bodies to avoid conflicts
+      used_bodies <- c(used_bodies, updated_assignments[[player]])
+    }
+    
+    ######## Check for NA assignments and resolve them:
+    
+    #After all players have been assigned bodies, 
+    #it checks if any player has been assigned NA (i.e., no valid body). 
+    #If so, it attempts to resolve the NA assignment.
+    
+    for (player in names(updated_assignments)) {
+      
+      # If a player is assigned NA, attempt to assign them back to their original body or a valid one:
+      if (is.na(updated_assignments[[player]])) {
+        
+        if (!is.na(current_assignments[[player]])) {
+          updated_assignments[[player]] <- current_assignments[[player]]  # Keep their current body if no valid one
+          
+        } else {
+          # Try to assign the player to a valid option (fallback to any body)
+          available_options <- setdiff(names(preferences), c(used_bodies, dead_bodies))
+          
+          if (length(available_options) > 0) {
+            updated_assignments[[player]] <- available_options[1]
+          } else {
+            updated_assignments[[player]] <- NA
+          }
+        }
+      }
+    }
+    
+    # Check if assignments are stable (no changes)
+    # updated_assignments: This is the set of assignments after players have applied their preferences in the current round.
+    # current_assignments: This is the state of assignments from the previous round (or the initial assignments if it's the first round).
+    # If updated_assignments is the same as current_assignments, 
+    # it means no player has chosen to change their body, implying that the game has reached an equilibrium state.
+    
+    if (identical(updated_assignments, current_assignments)) {
+      cat("Equilibrium reached in round", round, "\n")
+      return(updated_assignments)
+    }
+    
+    current_assignments <- updated_assignments
+  }
+  
+  # Return final assignments after all rounds
+  return(current_assignments)
+}
+
+
+# Run the game
+final_assignments <- evolve_game(preferences, initial_assignments, dead_bodies)
+print(final_assignments)
+
+##################### Function 4B
+
+track_iterations <- function(preferences, initial_assignments, dead_bodies, max_rounds = 10) {
+  iteration_log <- list()  # List to store results for each round
+  
+  evolve_game_with_tracking <- function(preferences, initial_assignments, dead_bodies, max_rounds) {
+    current_assignments <- initial_assignments
+    
+    for (round in seq_len(max_rounds)) {
+      cat("Starting round", round, "\n")
+      updated_assignments <- list()
+      used_bodies <- unlist(current_assignments)
+      
+      for (player in names(preferences)) {
+        available_options <- setdiff(names(preferences), c(used_bodies, dead_bodies))
+        preferred_body <- preferences[[player]]
+        
+        if (preferred_body %in% available_options) {
+          updated_assignments[[player]] <- preferred_body
+        } else if (preferred_body == paste0("Not_", player)) {
+          non_own_options <- setdiff(available_options, player)
+          updated_assignments[[player]] <- if (length(non_own_options) > 0) non_own_options[1] else NA
+        } else {
+          updated_assignments[[player]] <- if (length(available_options) > 0) available_options[1] else NA
+        }
+        
+        used_bodies <- c(used_bodies, updated_assignments[[player]])
+      }
+      
+      for (player in names(updated_assignments)) {
+        if (is.na(updated_assignments[[player]])) {
+          if (!is.na(current_assignments[[player]])) {
+            updated_assignments[[player]] <- current_assignments[[player]]
+          } else {
+            available_options <- setdiff(names(preferences), c(used_bodies, dead_bodies))
+            if (length(available_options) > 0) {
+              updated_assignments[[player]] <- available_options[1]
+            } else {
+              updated_assignments[[player]] <- NA
+            }
+          }
+        }
+      }
+      
+      # Debug: Log the current and updated assignments
+      cat("Logging round", round, "\n")
+      print(current_assignments)
+      print(updated_assignments)
+      
+      iteration_log[[round]] <- list(
+        CurrentAssignments = current_assignments,
+        UpdatedAssignments = updated_assignments
+      )
+      
+      if (identical(updated_assignments, current_assignments)) {
+        cat("Equilibrium reached in round", round, "\n")
+        break
+      }
+      
+      current_assignments <- updated_assignments
+    }
+    
+    return(current_assignments)
+  }
+  
+  final_assignments <- evolve_game_with_tracking(preferences, initial_assignments, dead_bodies, max_rounds)
+  
+  return(list(
+    FinalAssignments = final_assignments,
+    IterationLog = iteration_log
+  ))
+}
+
+final <- track_iterations(preferences, initial_assignments, dead_bodies)
+class(final)
+names(final)
+str(final)
+final$IterationLog
+
+### Conclusion:
+
+#Each player received their preferred body or the next best option in round 1.
+#In round 2, the same conditions (preferences, available bodies, and rules) led to identical assignments because no conflicts or unmet preferences remained.
+#Since no updates to the assignments occurred, the system reached stability, or equilibrium.
+
+#### Convert to a dataframe:
+
+unlist(final$FinalAssignments) # origin and destination
+names(final$FinalAssignments)  # origin
+
+
+final_assignments <- final$FinalAssignments
+
+# Convert the list to a data frame
+readable_assignments <- data.frame(
+  Player = names(final_assignments),
+  AssignedTo = unlist(final_assignments),
+  stringsAsFactors = FALSE
+)
+
+# Print the resulting data frame
+print(readable_assignments)
+
